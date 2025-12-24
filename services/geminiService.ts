@@ -9,7 +9,7 @@ export async function generatePuzzle(): Promise<GameBoard> {
   
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-2.5-pro",
       contents: `Search for the NYT Connections puzzle for today, ${today}. 
       Find the 4 categories (Yellow, Green, Blue, Purple) and their 4 words each.
       Return the data in the specified JSON format. If you cannot find today's specifically, 
