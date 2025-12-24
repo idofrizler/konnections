@@ -3,13 +3,14 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GameBoard, CategoryColor } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 export async function generatePuzzle(): Promise<GameBoard> {
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: MODEL_NAME,
       contents: `Search for the NYT Connections puzzle for today, ${today}. 
       Find the 4 categories (Yellow, Green, Blue, Purple) and their 4 words each.
       Return the data in the specified JSON format. If you cannot find today's specifically, 

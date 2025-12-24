@@ -299,7 +299,7 @@ const App: React.FC = () => {
       
       <footer className="mt-12 text-center text-[10px] text-gray-400">
         <p>Inspired by NYT Connections. Enhanced logic tools.</p>
-        <p className="mt-1">Puzzle search powered by Gemini 2.5 Pro</p>
+        <p className="mt-1">Puzzle search powered by Gemini AI</p>
       </footer>
     </div>
   );

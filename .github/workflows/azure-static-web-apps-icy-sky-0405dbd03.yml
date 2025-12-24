@@ -30,6 +30,7 @@ jobs:
         run: npm run build
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
       - name: Copy static web app config
         run: cp staticwebapp.config.json dist/
       - name: Deploy
