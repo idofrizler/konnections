@@ -22,13 +22,6 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<GameStatus>('PLAYING');
   const [message, setMessage] = useState<string>('');
   const [activeTagColor, setActiveTagColor] = useState<TagColor>(TagColor.NONE);
-  const [tagNotes, setTagNotes] = useState<Record<TagColor, string>>({
-    [TagColor.CORAL]: '',
-    [TagColor.TURQUOISE]: '',
-    [TagColor.HOTPINK]: '',
-    [TagColor.SLATE]: '',
-    [TagColor.NONE]: ''
-  });
   const [guessHistory, setGuessHistory] = useState<GuessResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -106,7 +99,6 @@ const App: React.FC = () => {
 
     const selectedWords = selectedTiles.map(t => t.word);
     
-    // Record guess for sharing
     const guessColors = selectedWords.map(word => {
       const cat = puzzle.categories.find(c => c.words.includes(word));
       return cat?.color || CategoryColor.NONE;
@@ -243,47 +235,43 @@ const App: React.FC = () => {
           disabled={status !== 'PLAYING' || isGenerating}
         />
 
-        <div className="w-full border-t border-gray-100 mt-6 pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold">Organization Tools</h2>
+        <div className="w-full border-t border-gray-100 mt-10 pt-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold tracking-tight">Organization Tools</h2>
             <button 
               onClick={clearAllMarks}
-              className="text-[10px] font-bold uppercase tracking-wider text-red-500 hover:text-red-700 underline underline-offset-4"
+              className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-colors"
             >
               Clear All Marks
             </button>
           </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {(Object.keys(TAG_LABELS) as TagColor[]).filter(c => c !== TagColor.NONE).map(color => (
-              <div key={color} className="flex flex-col gap-1.5">
-                <button
-                  onClick={() => setActiveTagColor(activeTagColor === color ? TagColor.NONE : color)}
-                  className={`
-                    w-full h-10 rounded-lg flex items-center justify-center font-black text-[10px] transition-all
-                    border-2 ${activeTagColor === color ? 'border-black scale-105 shadow-md' : 'border-transparent opacity-70 hover:opacity-100'}
-                  `}
-                  style={{ backgroundColor: TAG_COLOR_MAP[color] }}
-                >
-                  {activeTagColor === color ? 'ACTIVE' : TAG_LABELS[color]}
-                </button>
-                <input 
-                  type="text"
-                  placeholder="Suspected..."
-                  value={tagNotes[color]}
-                  onChange={(e) => setTagNotes(prev => ({ ...prev, [color]: e.target.value }))}
-                  className="w-full text-[10px] p-2 border border-gray-200 rounded focus:ring-1 focus:ring-black outline-none"
-                />
-              </div>
+              <button
+                key={color}
+                onClick={() => setActiveTagColor(activeTagColor === color ? TagColor.NONE : color)}
+                className={`
+                  w-full h-12 rounded-xl flex items-center justify-center font-black text-[11px] uppercase tracking-wider transition-all
+                  border-2 ${activeTagColor === color ? 'border-black scale-105 shadow-lg' : 'border-transparent opacity-80 hover:opacity-100'}
+                `}
+                style={{ 
+                  backgroundColor: TAG_COLOR_MAP[color],
+                  color: 'white',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                }}
+              >
+                {activeTagColor === color ? 'Active' : TAG_LABELS[color]}
+              </button>
             ))}
           </div>
 
-          <div className="mt-4 flex justify-center">
+          <div className="mt-8 flex justify-center">
             <button
               onClick={() => setActiveTagColor(TagColor.NONE)}
               className={`
-                px-4 py-2 rounded-full text-[10px] font-bold transition-all border-2
-                ${activeTagColor === TagColor.NONE ? 'bg-gray-100 border-black' : 'border-transparent text-gray-400'}
+                px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all border-2
+                ${activeTagColor === TagColor.NONE ? 'bg-gray-900 text-white border-black' : 'border-gray-200 text-gray-400 hover:border-gray-300'}
               `}
             >
               Selection Mode

@@ -19,6 +19,7 @@ const Tile: React.FC<TileProps> = ({ tile, onClick, disabled }) => {
     if (marks.length === 0) return '#efefe6';
     if (marks.length === 1) return TAG_COLOR_MAP[marks[0]];
     
+    // Improved sharp transition gradients
     if (marks.length === 2) {
       return `linear-gradient(to right, ${TAG_COLOR_MAP[marks[0]]} 50%, ${TAG_COLOR_MAP[marks[1]]} 50%)`;
     }
@@ -28,8 +29,10 @@ const Tile: React.FC<TileProps> = ({ tile, onClick, disabled }) => {
     const c3 = TAG_COLOR_MAP[marks[2]];
     const c4 = marks.length === 4 ? TAG_COLOR_MAP[marks[3]] : '#efefe6';
     
+    // Sharp quadrant transitions using percentages to avoid blurring
     return `conic-gradient(
-      ${c2} 0deg 90deg, 
+      from 0deg,
+      ${c2} 0% 90deg, 
       ${c4} 90deg 180deg, 
       ${c3} 180deg 270deg, 
       ${c1} 270deg 360deg
@@ -41,30 +44,27 @@ const Tile: React.FC<TileProps> = ({ tile, onClick, disabled }) => {
       onClick={onClick}
       disabled={disabled || tile.isSolved}
       className={`
-        relative aspect-[4/3] w-full rounded-md flex items-center justify-center p-1
+        relative aspect-[4/3] w-full rounded-md flex items-center justify-center p-2
         transition-all duration-150 transform
         ${tile.isSolved ? 'cursor-default' : 'cursor-pointer active:scale-95'}
-        overflow-hidden border-2 border-transparent
+        overflow-hidden border-0
       `}
       style={{ 
-        background: getBackground(),
-        boxShadow: tile.isSelected ? 'inset 0 0 0 4px #000000' : 'none'
+        background: getBackground()
       }}
     >
+      {/* Precision Selection Border Overlay */}
+      {tile.isSelected && (
+        <div className="absolute inset-0 border-[4px] border-black rounded-md z-20 pointer-events-none" />
+      )}
+
       <span className={`
         text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-tight text-center z-10 select-none
-        ${tile.isSolved ? 'text-black' : 'text-black'}
-        ${tile.isSelected ? 'scale-90 transition-transform' : ''}
+        text-black
+        ${tile.isSelected ? 'scale-90' : 'transition-transform'}
       `}>
         {tile.word}
       </span>
-      {!tile.isSolved && tile.marks.length > 1 && (
-        <div className="absolute top-1 right-1 flex gap-0.5">
-           {tile.marks.map((m, i) => (
-             <div key={i} className="w-1.5 h-1.5 rounded-full border border-black/10" style={{backgroundColor: TAG_COLOR_MAP[m]}} />
-           ))}
-        </div>
-      )}
     </button>
   );
 };

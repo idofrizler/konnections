@@ -8,10 +8,10 @@ export enum CategoryColor {
 }
 
 export enum TagColor {
-  CORAL = 'CORAL',
-  TURQUOISE = 'TURQUOISE',
-  HOTPINK = 'HOTPINK',
-  SLATE = 'SLATE',
+  INDIGO = 'INDIGO',
+  CYAN = 'CYAN',
+  ORANGE = 'ORANGE',
+  PINK = 'PINK',
   NONE = 'NONE'
 }
 

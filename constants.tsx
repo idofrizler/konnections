@@ -10,18 +10,18 @@ export const COLOR_MAP: Record<CategoryColor, string> = {
 };
 
 export const TAG_COLOR_MAP: Record<TagColor, string> = {
-  [TagColor.CORAL]: '#ff7f50',
-  [TagColor.TURQUOISE]: '#40e0d0',
-  [TagColor.HOTPINK]: '#ff69b4',
-  [TagColor.SLATE]: '#708090',
+  [TagColor.INDIGO]: '#6366f1',
+  [TagColor.CYAN]: '#06b6d4',
+  [TagColor.ORANGE]: '#f97316',
+  [TagColor.PINK]: '#ec4899',
   [TagColor.NONE]: 'transparent'
 };
 
 export const TAG_LABELS: Record<TagColor, string> = {
-  [TagColor.CORAL]: 'Group A',
-  [TagColor.TURQUOISE]: 'Group B',
-  [TagColor.HOTPINK]: 'Group C',
-  [TagColor.SLATE]: 'Group D',
+  [TagColor.INDIGO]: 'Group A',
+  [TagColor.CYAN]: 'Group B',
+  [TagColor.ORANGE]: 'Group C',
+  [TagColor.PINK]: 'Group D',
   [TagColor.NONE]: 'None'
 };
 
