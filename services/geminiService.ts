@@ -9,44 +9,36 @@ export async function generatePuzzle(): Promise<GameBoard> {
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   
   try {
-    const response = await ai.models.generateContent({
+    // First, search for today's puzzle using Google Search grounding
+    const searchResponse = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: `Search for the NYT Connections puzzle for today, ${today}. 
       Find the 4 categories (Yellow, Green, Blue, Purple) and their 4 words each.
-      Return the data in the specified JSON format. If you cannot find today's specifically, 
-      provide the most recent one you can find.`,
+      Return ONLY valid JSON in this exact format (no other text):
+      {
+        "date": "December 24, 2025",
+        "categories": [
+          {"label": "CATEGORY NAME", "words": ["WORD1", "WORD2", "WORD3", "WORD4"], "color": "YELLOW", "difficulty": 1},
+          {"label": "CATEGORY NAME", "words": ["WORD1", "WORD2", "WORD3", "WORD4"], "color": "GREEN", "difficulty": 2},
+          {"label": "CATEGORY NAME", "words": ["WORD1", "WORD2", "WORD3", "WORD4"], "color": "BLUE", "difficulty": 3},
+          {"label": "CATEGORY NAME", "words": ["WORD1", "WORD2", "WORD3", "WORD4"], "color": "PURPLE", "difficulty": 4}
+        ]
+      }
+      If you cannot find today's puzzle, provide the most recent one you can find.`,
       config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            date: { type: Type.STRING },
-            categories: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  label: { type: Type.STRING },
-                  words: { 
-                    type: Type.ARRAY, 
-                    items: { type: Type.STRING },
-                    minItems: 4,
-                    maxItems: 4
-                  },
-                  color: { type: Type.STRING, enum: ['YELLOW', 'GREEN', 'BLUE', 'PURPLE'] },
-                  difficulty: { type: Type.INTEGER }
-                },
-                required: ['label', 'words', 'color', 'difficulty']
-              }
-            }
-          },
-          required: ['categories']
-        }
+        tools: [{ googleSearch: {} }]
       }
     });
 
-    const data = JSON.parse(response.text);
+    // Extract JSON from the response
+    const responseText = searchResponse.text || "";
+    const jsonMatch = responseText.match(/\{[\s\S]*"categories"[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("Could not find JSON in response:", responseText);
+      return getFallbackPuzzle();
+    }
+    
+    const data = JSON.parse(jsonMatch[0]);
     const categories = data.categories.map((c: any) => ({
       ...c,
       id: Math.random().toString(36).substr(2, 9),
