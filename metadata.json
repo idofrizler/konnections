@@ -1,0 +1,5 @@
+{
+  "name": "Konnections",
+  "description": "An enhanced NYT Connections clone with advanced color-coding tools for tile organization and red-herring management.",
+  "requestFramePermissions": []
+}
