@@ -2,7 +2,7 @@
   "name": "konnections-api",
   "version": "1.0.0",
   "description": "Azure Functions API for Konnections puzzle caching",
-  "main": "src/functions/*.js",
+  "main": "dist/functions/getPuzzle.js",
   "scripts": {
     "build": "tsc",
     "start": "func start",
