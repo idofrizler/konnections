@@ -1,12 +1,27 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { GameBoard, CategoryColor } from "../types";
+import { getLocalDateKey, getCachedPuzzle, cachePuzzle } from "./cacheService";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 export async function generatePuzzle(): Promise<GameBoard> {
+  const dateKey = getLocalDateKey();
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  
+  // Check cache first
+  const cachedPuzzle = getCachedPuzzle(dateKey);
+  if (cachedPuzzle) {
+    console.log(`Using cached puzzle for ${dateKey}`);
+    // Return cached puzzle with re-shuffled words for variety
+    return {
+      ...cachedPuzzle,
+      allWords: [...cachedPuzzle.allWords].sort(() => Math.random() - 0.5)
+    };
+  }
+  
+  console.log(`No cached puzzle for ${dateKey}, fetching from API...`);
   
   try {
     // First, search for today's puzzle using Google Search grounding
@@ -47,11 +62,17 @@ export async function generatePuzzle(): Promise<GameBoard> {
 
     const allWords = categories.flatMap((c: any) => c.words);
     
-    return {
+    const puzzle: GameBoard = {
       date: data.date || today,
       categories,
       allWords: allWords.sort(() => Math.random() - 0.5)
     };
+    
+    // Cache the puzzle for future users
+    cachePuzzle(dateKey, puzzle);
+    console.log(`Cached puzzle for ${dateKey}`);
+    
+    return puzzle;
   } catch (error) {
     console.error("Failed to fetch today's puzzle:", error);
     return getFallbackPuzzle();
