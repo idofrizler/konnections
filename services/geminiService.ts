@@ -1,80 +1,53 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
 import { GameBoard, CategoryColor } from "../types";
-import { getLocalDateKey, getCachedPuzzle, cachePuzzle } from "./cacheService";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+/**
+ * Gets the user's local date in YYYY-MM-DD format.
+ * This is sent to the API so the correct puzzle is returned based on the user's timezone.
+ */
+function getLocalDateKey(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export async function generatePuzzle(): Promise<GameBoard> {
   const dateKey = getLocalDateKey();
-  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   
-  // Check cache first
-  const cachedPuzzle = getCachedPuzzle(dateKey);
-  if (cachedPuzzle) {
-    console.log(`Using cached puzzle for ${dateKey}`);
-    // Return cached puzzle with re-shuffled words for variety
-    return {
-      ...cachedPuzzle,
-      allWords: [...cachedPuzzle.allWords].sort(() => Math.random() - 0.5)
-    };
-  }
-  
-  console.log(`No cached puzzle for ${dateKey}, fetching from API...`);
+  console.log(`Fetching puzzle for date: ${dateKey}`);
   
   try {
-    // First, search for today's puzzle using Google Search grounding
-    const searchResponse = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: `Search for the NYT Connections puzzle for today, ${today}. 
-      Find the 4 categories (Yellow, Green, Blue, Purple) and their 4 words each.
-      Return ONLY valid JSON in this exact format (no other text):
-      {
-        "date": "December 24, 2025",
-        "categories": [
-          {"label": "CATEGORY NAME", "words": ["WORD1", "WORD2", "WORD3", "WORD4"], "color": "YELLOW", "difficulty": 1},
-          {"label": "CATEGORY NAME", "words": ["WORD1", "WORD2", "WORD3", "WORD4"], "color": "GREEN", "difficulty": 2},
-          {"label": "CATEGORY NAME", "words": ["WORD1", "WORD2", "WORD3", "WORD4"], "color": "BLUE", "difficulty": 3},
-          {"label": "CATEGORY NAME", "words": ["WORD1", "WORD2", "WORD3", "WORD4"], "color": "PURPLE", "difficulty": 4}
-        ]
-      }
-      If you cannot find today's puzzle, provide the most recent one you can find.`,
-      config: {
-        tools: [{ googleSearch: {} }]
-      }
-    });
-
-    // Extract JSON from the response
-    const responseText = searchResponse.text || "";
-    const jsonMatch = responseText.match(/\{[\s\S]*"categories"[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error("Could not find JSON in response:", responseText);
-      return getFallbackPuzzle();
+    // Call the Azure Function API which handles caching globally
+    const response = await fetch(`/api/puzzle?date=${dateKey}`);
+    
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
     }
     
-    const data = JSON.parse(jsonMatch[0]);
-    const categories = data.categories.map((c: any) => ({
+    const data = await response.json();
+    
+    if (data.cached) {
+      console.log(`Received cached puzzle for ${dateKey}`);
+    } else {
+      console.log(`Received fresh puzzle for ${dateKey}`);
+    }
+    
+    if (data.fallback) {
+      console.warn("Using fallback puzzle");
+    }
+    
+    const puzzle = data.puzzle as GameBoard;
+    
+    // Map color strings to CategoryColor enum
+    puzzle.categories = puzzle.categories.map((c: any) => ({
       ...c,
-      id: Math.random().toString(36).substr(2, 9),
       color: c.color as CategoryColor
     }));
-
-    const allWords = categories.flatMap((c: any) => c.words);
-    
-    const puzzle: GameBoard = {
-      date: data.date || today,
-      categories,
-      allWords: allWords.sort(() => Math.random() - 0.5)
-    };
-    
-    // Cache the puzzle for future users
-    cachePuzzle(dateKey, puzzle);
-    console.log(`Cached puzzle for ${dateKey}`);
     
     return puzzle;
   } catch (error) {
-    console.error("Failed to fetch today's puzzle:", error);
+    console.error("Failed to fetch puzzle from API:", error);
     return getFallbackPuzzle();
   }
 }

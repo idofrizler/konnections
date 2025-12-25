@@ -1,0 +1,20 @@
+{
+  "name": "konnections-api",
+  "version": "1.0.0",
+  "description": "Azure Functions API for Konnections puzzle caching",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "func start",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "@azure/storage-blob": "^12.17.0",
+    "@google/genai": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
