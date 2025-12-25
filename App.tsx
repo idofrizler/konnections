@@ -9,7 +9,7 @@ import {
   Category,
   GuessResult
 } from './types';
-import { generatePuzzle } from './services/geminiService';
+import { generatePuzzle, getDateKey } from './services/geminiService';
 import { COLOR_MAP, TAG_COLOR_MAP, TAG_LABELS, INITIAL_MISTAKES, COLOR_EMOJI } from './constants';
 import Tile from './components/Tile';
 import Controls from './components/Controls';
@@ -24,11 +24,13 @@ const App: React.FC = () => {
   const [activeTagColor, setActiveTagColor] = useState<TagColor>(TagColor.NONE);
   const [guessHistory, setGuessHistory] = useState<GuessResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>(getDateKey(0));
 
-  const initGame = useCallback(async () => {
+  const initGame = useCallback(async (dateKey?: string) => {
+    const targetDate = dateKey || selectedDate;
     setIsGenerating(true);
-    setMessage("Fetching today's puzzle...");
-    const newPuzzle = await generatePuzzle();
+    setMessage("Fetching puzzle...");
+    const newPuzzle = await generatePuzzle(targetDate);
     setPuzzle(newPuzzle);
     setTiles(newPuzzle.allWords.map(word => ({
       word,
@@ -181,7 +183,39 @@ const App: React.FC = () => {
     <div className="min-h-screen max-w-2xl mx-auto px-4 py-8 flex flex-col items-center">
       <header className="mb-6 text-center">
         <h1 className="text-4xl sm:text-5xl font-black mb-1 italic">KONNECTIONS</h1>
-        <p className="text-xs sm:text-sm text-gray-500 font-medium">{puzzle?.date || 'Today'}</p>
+        <p className="text-xs sm:text-sm text-gray-500 font-medium mb-3">{puzzle?.date || 'Today'}</p>
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={() => {
+              const today = getDateKey(0);
+              setSelectedDate(today);
+              initGame(today);
+            }}
+            disabled={isGenerating}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+              selectedDate === getDateKey(0)
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            } ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => {
+              const yesterday = getDateKey(-1);
+              setSelectedDate(yesterday);
+              initGame(yesterday);
+            }}
+            disabled={isGenerating}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+              selectedDate === getDateKey(-1)
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            } ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            Yesterday
+          </button>
+        </div>
       </header>
 
       {message && (
@@ -288,7 +322,7 @@ const App: React.FC = () => {
               Share Results
             </button>
             <button
-              onClick={initGame}
+              onClick={() => initGame(selectedDate)}
               className="w-full py-4 bg-black text-white rounded-full font-bold text-lg hover:bg-gray-800 transition-colors shadow-lg"
             >
               Play Again

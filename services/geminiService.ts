@@ -1,25 +1,39 @@
 import { GameBoard, CategoryColor } from "../types";
 
 /**
- * Gets the user's local date in YYYY-MM-DD format.
- * This is sent to the API so the correct puzzle is returned based on the user's timezone.
+ * Gets a date in YYYY-MM-DD format.
+ * @param daysOffset - Number of days to offset from today (0 = today, -1 = yesterday)
  */
-function getLocalDateKey(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+export function getDateKey(daysOffset: number = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() + daysOffset);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
-export async function generatePuzzle(): Promise<GameBoard> {
-  const dateKey = getLocalDateKey();
+/**
+ * Formats a date key (YYYY-MM-DD) to a readable format.
+ */
+export function formatDateForDisplay(dateKey: string): string {
+  const date = new Date(dateKey);
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'long',
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+}
+
+export async function generatePuzzle(dateKey?: string): Promise<GameBoard> {
+  const targetDate = dateKey || getDateKey(0);
   
-  console.log(`Fetching puzzle for date: ${dateKey}`);
+  console.log(`Fetching puzzle for date: ${targetDate}`);
   
   try {
     // Call the Azure Function API which handles caching globally
-    const response = await fetch(`/api/puzzle?date=${dateKey}`);
+    const response = await fetch(`/api/puzzle?date=${targetDate}`);
     
     if (!response.ok) {
       throw new Error(`API returned ${response.status}`);
