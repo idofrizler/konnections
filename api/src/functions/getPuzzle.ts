@@ -51,19 +51,15 @@ async function getCachedPuzzle(dateKey: string): Promise<GameBoard | null> {
 }
 
 async function cachePuzzle(dateKey: string, puzzle: GameBoard): Promise<void> {
-  try {
-    const containerClient = await getBlobClient();
-    const blockBlobClient = containerClient.getBlockBlobClient(`${dateKey}.json`);
-    
-    const content = JSON.stringify(puzzle);
-    await blockBlobClient.upload(content, content.length, {
-      blobHTTPHeaders: { blobContentType: "application/json" }
-    });
-    
-    console.log(`Cached puzzle for ${dateKey}`);
-  } catch (error) {
-    console.error("Error writing to blob storage:", error);
-  }
+  const containerClient = await getBlobClient();
+  const blockBlobClient = containerClient.getBlockBlobClient(`${dateKey}.json`);
+  
+  const content = JSON.stringify(puzzle);
+  await blockBlobClient.upload(content, content.length, {
+    blobHTTPHeaders: { blobContentType: "application/json" }
+  });
+  
+  console.log(`Cached puzzle for ${dateKey}`);
 }
 
 async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
