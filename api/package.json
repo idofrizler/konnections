@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Azure Functions API for Konnections puzzle caching",
   "main": "dist/functions/getPuzzle.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "func start",
