@@ -172,14 +172,13 @@ export async function getPuzzle(request: HttpRequest, context: InvocationContext
     try {
       puzzle = await generatePuzzleFromAPI(today);
       
-      // Cache the puzzle and wait for it
-      let cacheError: string | null = null;
+      // Cache the puzzle for future users
       try {
         await cachePuzzle(dateKey, puzzle);
         context.log(`Successfully cached puzzle for ${dateKey}`);
       } catch (err) {
-        cacheError = String(err);
         context.error("Failed to cache puzzle:", err);
+        // Continue anyway - caching failure shouldn't break the response
       }
       
       // Shuffle words
@@ -187,7 +186,7 @@ export async function getPuzzle(request: HttpRequest, context: InvocationContext
       
       return {
         status: 200,
-        jsonBody: { puzzle, cached: false, cacheError }
+        jsonBody: { puzzle, cached: false }
       };
     } catch (apiError) {
       context.error("API generation failed:", apiError);
