@@ -1,6 +1,12 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { BlobServiceClient } from "@azure/storage-blob";
 import { GoogleGenAI } from "@google/genai";
+import * as crypto from "crypto";
+
+// Polyfill for crypto if not available globally
+if (typeof globalThis.crypto === "undefined") {
+  (globalThis as any).crypto = crypto;
+}
 
 interface Category {
   id: string;
