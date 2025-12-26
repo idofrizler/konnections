@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   GameBoard, 
   TileState, 
@@ -14,6 +14,46 @@ import { COLOR_MAP, TAG_COLOR_MAP, TAG_LABELS, INITIAL_MISTAKES, COLOR_EMOJI } f
 import Tile from './components/Tile';
 import Controls from './components/Controls';
 
+// Local storage key prefix
+const STORAGE_KEY_PREFIX = 'konnections_game_';
+
+interface SavedGameState {
+  puzzle: GameBoard;
+  tiles: TileState[];
+  mistakes: number;
+  solvedCategories: Category[];
+  status: GameStatus;
+  guessHistory: GuessResult[];
+}
+
+function saveGameState(dateKey: string, state: SavedGameState): void {
+  try {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${dateKey}`, JSON.stringify(state));
+  } catch (e) {
+    console.error('Failed to save game state:', e);
+  }
+}
+
+function loadGameState(dateKey: string): SavedGameState | null {
+  try {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}${dateKey}`);
+    if (saved) {
+      return JSON.parse(saved) as SavedGameState;
+    }
+  } catch (e) {
+    console.error('Failed to load game state:', e);
+  }
+  return null;
+}
+
+function clearGameState(dateKey: string): void {
+  try {
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}${dateKey}`);
+  } catch (e) {
+    console.error('Failed to clear game state:', e);
+  }
+}
+
 const App: React.FC = () => {
   const [puzzle, setPuzzle] = useState<GameBoard | null>(null);
   const [tiles, setTiles] = useState<TileState[]>([]);
@@ -26,8 +66,28 @@ const App: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(getDateKey(0));
 
-  const initGame = useCallback(async (dateKey?: string) => {
+  const initGame = useCallback(async (dateKey?: string, forceNew: boolean = false) => {
     const targetDate = dateKey || selectedDate;
+    
+    // Try to load saved game state first (unless forcing a new game)
+    if (!forceNew) {
+      const saved = loadGameState(targetDate);
+      if (saved) {
+        console.log(`Restoring saved game for ${targetDate}`);
+        setPuzzle(saved.puzzle);
+        // Restore tiles but clear selections (those are temporary)
+        setTiles(saved.tiles.map(t => ({ ...t, isSelected: false })));
+        setMistakes(saved.mistakes);
+        setSolvedCategories(saved.solvedCategories);
+        setStatus(saved.status);
+        setGuessHistory(saved.guessHistory);
+        setSelectedDate(targetDate);
+        setMessage('');
+        return;
+      }
+    }
+    
+    // No saved state, fetch new puzzle
     setIsGenerating(true);
     setMessage("Fetching puzzle...");
     const newPuzzle = await generatePuzzle(targetDate);
@@ -42,13 +102,29 @@ const App: React.FC = () => {
     setSolvedCategories([]);
     setGuessHistory([]);
     setStatus('PLAYING');
+    setSelectedDate(targetDate);
     setMessage('');
     setIsGenerating(false);
-  }, []);
+  }, [selectedDate]);
 
+  // Save game state whenever relevant state changes
   useEffect(() => {
-    initGame();
-  }, [initGame]);
+    if (puzzle && tiles.length > 0) {
+      saveGameState(selectedDate, {
+        puzzle,
+        tiles,
+        mistakes,
+        solvedCategories,
+        status,
+        guessHistory
+      });
+    }
+  }, [puzzle, tiles, mistakes, solvedCategories, status, guessHistory, selectedDate]);
+
+  // Initialize game on mount
+  useEffect(() => {
+    initGame(getDateKey(0));
+  }, []);
 
   const toggleSelect = (word: string) => {
     if (status !== 'PLAYING') return;
@@ -322,7 +398,10 @@ const App: React.FC = () => {
               Share Results
             </button>
             <button
-              onClick={() => initGame(selectedDate)}
+              onClick={() => {
+                clearGameState(selectedDate);
+                initGame(selectedDate, true);
+              }}
               className="w-full py-4 bg-black text-white rounded-full font-bold text-lg hover:bg-gray-800 transition-colors shadow-lg"
             >
               Play Again
