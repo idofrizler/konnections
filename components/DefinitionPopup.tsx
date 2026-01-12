@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DefinitionResult } from '../services/dictionaryService';
 
 interface DefinitionPopupProps {
@@ -9,6 +9,24 @@ interface DefinitionPopupProps {
 
 const DefinitionPopup: React.FC<DefinitionPopupProps> = ({ definition, isLoading, onClose }) => {
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+  
+  // Disable body scroll when popup is open
+  useEffect(() => {
+    const isOpen = definition !== null || isLoading;
+    if (isOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+    }
+    return () => {
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, parseInt(scrollY || '0') * -1);
+    };
+  }, [definition, isLoading]);
 
   const toggleSection = (idx: number) => {
     setExpandedSections(prev => {
@@ -25,37 +43,41 @@ const DefinitionPopup: React.FC<DefinitionPopupProps> = ({ definition, isLoading
   if (!definition && !isLoading) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" />
-      
-      {/* Popup */}
       <div 
-        className="relative bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 z-10"
-          aria-label="Close"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        className="absolute inset-0 bg-black/40" 
+        onClick={onClose}
+      />
+      
+      {/* Popup Container */}
+      <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full flex flex-col"
+           style={{ maxHeight: '600px' }}>
+        
+        {/* Header with close button */}
+        <div className="flex justify-end p-3 pb-0 shrink-0">
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
+            aria-label="Close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12 px-5">
-            <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-600 rounded-full animate-spin" />
-          </div>
-        ) : definition ? (
-          <div className="overflow-y-auto">
-            <div className="p-5">
+        {/* Scrollable content */}
+        <div 
+          className="px-5 pb-5 overflow-y-auto flex-1"
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-600 rounded-full animate-spin" />
+            </div>
+          ) : definition ? (
+            <>
               {/* Word */}
               <h2 className="text-2xl font-black uppercase tracking-tight text-gray-900 mb-1">
                 {definition.word}
@@ -182,9 +204,9 @@ const DefinitionPopup: React.FC<DefinitionPopupProps> = ({ definition, isLoading
                   </p>
                 </div>
               )}
-            </div>
-          </div>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
     </div>
   );
