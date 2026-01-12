@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   GameBoard, 
   TileState, 
@@ -10,9 +10,11 @@ import {
   GuessResult
 } from './types';
 import { generatePuzzle, getDateKey } from './services/geminiService';
+import { lookupWord as fetchDefinition, DefinitionResult } from './services/dictionaryService';
 import { COLOR_MAP, TAG_COLOR_MAP, TAG_LABELS, INITIAL_MISTAKES, COLOR_EMOJI } from './constants';
 import Tile from './components/Tile';
 import Controls from './components/Controls';
+import DefinitionPopup from './components/DefinitionPopup';
 
 // Local storage key prefix
 const STORAGE_KEY_PREFIX = 'konnections_game_';
@@ -65,6 +67,11 @@ const App: React.FC = () => {
   const [guessHistory, setGuessHistory] = useState<GuessResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(getDateKey(0));
+  
+  // Definition lookup state
+  const [lookupWord, setLookupWord] = useState<string | null>(null);
+  const [definition, setDefinition] = useState<DefinitionResult | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
 
   const initGame = useCallback(async (dateKey?: string, forceNew: boolean = false) => {
     const targetDate = dateKey || selectedDate;
@@ -253,6 +260,22 @@ const App: React.FC = () => {
     });
   };
 
+  const handleLookup = useCallback(async (word: string) => {
+    setLookupWord(word);
+    setDefinition(null);
+    setIsLookingUp(true);
+    
+    const result = await fetchDefinition(word);
+    setDefinition(result);
+    setIsLookingUp(false);
+  }, []);
+
+  const handleCloseDefinition = useCallback(() => {
+    setLookupWord(null);
+    setDefinition(null);
+    setIsLookingUp(false);
+  }, []);
+
   const selectedCount = tiles.filter(t => t.isSelected).length;
 
   return (
@@ -308,7 +331,19 @@ const App: React.FC = () => {
             style={{ backgroundColor: COLOR_MAP[cat.color] }}
           >
             <h3 className="font-black uppercase tracking-widest text-xs sm:text-sm md:text-base mb-1">{cat.label}</h3>
-            <p className="font-medium text-[10px] sm:text-xs uppercase tracking-wider text-center">{cat.words.join(', ')}</p>
+            <p className="font-medium text-[10px] sm:text-xs uppercase tracking-wider text-center">
+              {cat.words.map((word, idx) => (
+                <span key={word}>
+                  <button
+                    onClick={() => handleLookup(word)}
+                    className="hover:underline focus:underline focus:outline-none"
+                  >
+                    {word}
+                  </button>
+                  {idx < cat.words.length - 1 && ', '}
+                </span>
+              ))}
+            </p>
           </div>
         ))}
 
@@ -318,6 +353,7 @@ const App: React.FC = () => {
               key={tile.word} 
               tile={tile} 
               onClick={() => toggleSelect(tile.word)}
+              onLookup={handleLookup}
               disabled={status !== 'PLAYING'}
             />
           ))}
@@ -345,16 +381,8 @@ const App: React.FC = () => {
           disabled={status !== 'PLAYING' || isGenerating}
         />
 
-        <div className="w-full border-t border-gray-100 mt-10 pt-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold tracking-tight">Organization Tools</h2>
-            <button 
-              onClick={clearAllMarks}
-              className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Clear All Marks
-            </button>
-          </div>
+        <div className="w-full border-t border-gray-100 mt-4 pt-8">
+
           
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {(Object.keys(TAG_LABELS) as TagColor[]).filter(c => c !== TagColor.NONE).map(color => (
@@ -376,17 +404,6 @@ const App: React.FC = () => {
             ))}
           </div>
 
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={() => setActiveTagColor(TagColor.NONE)}
-              className={`
-                px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all border-2
-                ${activeTagColor === TagColor.NONE ? 'bg-gray-900 text-white border-black' : 'border-gray-200 text-gray-400 hover:border-gray-300'}
-              `}
-            >
-              Selection Mode
-            </button>
-          </div>
         </div>
 
         {(status === 'WON' || status === 'LOST') && (
@@ -413,7 +430,17 @@ const App: React.FC = () => {
       <footer className="mt-12 text-center text-[10px] text-gray-400">
         <p>Inspired by NYT Connections. Enhanced logic tools.</p>
         <p className="mt-1">Puzzle search powered by Gemini AI</p>
+        <p className="mt-1">Long-press any word to look up its definition</p>
       </footer>
+
+      {/* Definition Popup */}
+      {(lookupWord || isLookingUp) && (
+        <DefinitionPopup
+          definition={definition}
+          isLoading={isLookingUp}
+          onClose={handleCloseDefinition}
+        />
+      )}
     </div>
   );
 };
