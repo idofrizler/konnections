@@ -48,7 +48,7 @@ export async function generatePuzzle(dateKey?: string): Promise<GameBoard> {
     }
     
     if (data.fallback) {
-      console.warn("Using fallback puzzle");
+      console.warn("Using fallback puzzle - this will not be cached");
     }
     
     const puzzle = data.puzzle as GameBoard;
