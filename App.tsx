@@ -302,21 +302,6 @@ const App: React.FC = () => {
             Today
           </button>
           <button
-            onClick={() => {
-              const yesterday = getDateKey(-1);
-              setSelectedDate(yesterday);
-              initGame(yesterday);
-            }}
-            disabled={isGenerating}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-              selectedDate === getDateKey(-1)
-                ? 'bg-black text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            } ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            Yesterday
-          </button>
-          <button
             onClick={() => setShowArchive(true)}
             disabled={isGenerating}
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-100 text-gray-600 hover:bg-gray-200 ${

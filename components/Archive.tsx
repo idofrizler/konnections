@@ -10,23 +10,23 @@ interface ArchiveProps {
 interface PuzzleListItem {
   dateKey: string;
   displayDate: string;
-  isCompleted: boolean;
+  status: 'PLAYING' | 'WON' | 'LOST' | null;
 }
 
 const STORAGE_KEY_PREFIX = 'konnections_game_';
 const ITEMS_PER_PAGE = 10;
 
-function checkPuzzleCompleted(dateKey: string): boolean {
+function getPuzzleStatus(dateKey: string): 'PLAYING' | 'WON' | 'LOST' | null {
   try {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}${dateKey}`);
     if (saved) {
       const state = JSON.parse(saved);
-      return state.status === 'WON' || state.status === 'LOST';
+      return state.status || null;
     }
   } catch (e) {
     console.error('Failed to check puzzle status:', e);
   }
-  return false;
+  return null;
 }
 
 const Archive: React.FC<ArchiveProps> = ({ onSelectDate, currentDate, onClose }) => {
@@ -48,7 +48,7 @@ const Archive: React.FC<ArchiveProps> = ({ onSelectDate, currentDate, onClose })
       newPuzzles.push({
         dateKey,
         displayDate: formatDateForDisplay(dateKey),
-        isCompleted: checkPuzzleCompleted(dateKey)
+        status: getPuzzleStatus(dateKey)
       });
     }
     
@@ -100,14 +100,17 @@ const Archive: React.FC<ArchiveProps> = ({ onSelectDate, currentDate, onClose })
                   puzzle.dateKey === currentDate
                     ? 'bg-black text-white'
                     : 'bg-gray-50 hover:bg-gray-100'
-                } ${puzzle.isCompleted ? 'border-2 border-green-500' : ''}`}
+                } ${
+                  puzzle.status === 'WON' ? 'border-2 border-green-500' : 
+                  puzzle.status === 'LOST' ? 'border-2 border-red-500' : ''
+                }`}
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-bold text-sm">{puzzle.displayDate}</div>
                     <div className="text-xs opacity-70 mt-0.5">{puzzle.dateKey}</div>
                   </div>
-                  {puzzle.isCompleted && (
+                  {puzzle.status === 'WON' && (
                     <div className="flex items-center gap-1">
                       <svg 
                         className="w-5 h-5 text-green-500" 
@@ -121,7 +124,25 @@ const Archive: React.FC<ArchiveProps> = ({ onSelectDate, currentDate, onClose })
                         />
                       </svg>
                       <span className={`text-xs font-bold ${puzzle.dateKey === currentDate ? 'text-green-300' : 'text-green-600'}`}>
-                        Completed
+                        Solved
+                      </span>
+                    </div>
+                  )}
+                  {puzzle.status === 'LOST' && (
+                    <div className="flex items-center gap-1">
+                      <svg 
+                        className="w-5 h-5 text-red-500" 
+                        fill="currentColor" 
+                        viewBox="0 0 20 20"
+                      >
+                        <path 
+                          fillRule="evenodd" 
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" 
+                          clipRule="evenodd" 
+                        />
+                      </svg>
+                      <span className={`text-xs font-bold ${puzzle.dateKey === currentDate ? 'text-red-300' : 'text-red-600'}`}>
+                        Failed
                       </span>
                     </div>
                   )}
