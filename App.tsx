@@ -15,6 +15,7 @@ import { COLOR_MAP, TAG_COLOR_MAP, TAG_LABELS, INITIAL_MISTAKES, COLOR_EMOJI } f
 import Tile from './components/Tile';
 import Controls from './components/Controls';
 import DefinitionPopup from './components/DefinitionPopup';
+import Archive from './components/Archive';
 
 // Local storage key prefix
 const STORAGE_KEY_PREFIX = 'konnections_game_';
@@ -72,6 +73,7 @@ const App: React.FC = () => {
   const [lookupWord, setLookupWord] = useState<string | null>(null);
   const [definition, setDefinition] = useState<DefinitionResult | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
 
   const initGame = useCallback(async (dateKey?: string, forceNew: boolean = false) => {
     const targetDate = dateKey || selectedDate;
@@ -314,6 +316,15 @@ const App: React.FC = () => {
           >
             Yesterday
           </button>
+          <button
+            onClick={() => setShowArchive(true)}
+            disabled={isGenerating}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-100 text-gray-600 hover:bg-gray-200 ${
+              isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            Archive
+          </button>
         </div>
       </header>
 
@@ -439,6 +450,18 @@ const App: React.FC = () => {
           definition={definition}
           isLoading={isLookingUp}
           onClose={handleCloseDefinition}
+        />
+      )}
+
+      {/* Archive Modal */}
+      {showArchive && (
+        <Archive
+          currentDate={selectedDate}
+          onSelectDate={(dateKey) => {
+            setSelectedDate(dateKey);
+            initGame(dateKey);
+          }}
+          onClose={() => setShowArchive(false)}
         />
       )}
     </div>
