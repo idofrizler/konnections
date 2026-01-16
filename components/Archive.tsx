@@ -35,6 +35,8 @@ const Archive: React.FC<ArchiveProps> = ({ onSelectDate, currentDate, onClose })
   const [isLoading, setIsLoading] = useState(false);
 
   const loadMorePuzzles = useCallback(() => {
+    if (isLoading) return; // Prevent concurrent loading
+    
     setIsLoading(true);
     
     const startOffset = -1 - (page * ITEMS_PER_PAGE);
@@ -53,7 +55,7 @@ const Archive: React.FC<ArchiveProps> = ({ onSelectDate, currentDate, onClose })
     setPuzzles(prev => [...prev, ...newPuzzles]);
     setPage(prev => prev + 1);
     setIsLoading(false);
-  }, [page]);
+  }, [page, isLoading]);
 
   useEffect(() => {
     loadMorePuzzles();
