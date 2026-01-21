@@ -410,7 +410,7 @@ const App: React.FC = () => {
         />
 
 
-        <div className="w-full border-t border-gray-100 mt-4 pt-8">
+        <div className="w-full mt-4">
 
           
           <div className="flex justify-center gap-2">
@@ -421,7 +421,7 @@ const App: React.FC = () => {
                 title={TAG_LABELS[color]}
                 onClick={() => setActiveTagColor(activeTagColor === color ? TagColor.NONE : color)}
                 className={`
-                  w-8 h-8 rounded-lg transition-all
+                  w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all
                   border-2 ${activeTagColor === color ? 'border-black scale-105 shadow-lg' : 'border-transparent opacity-80 hover:opacity-100'}
                 `}
                 style={{ backgroundColor: TAG_COLOR_MAP[color] }}
