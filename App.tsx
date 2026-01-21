@@ -66,6 +66,7 @@ const App: React.FC = () => {
   const [message, setMessage] = useState<string>('');
   const [activeTagColor, setActiveTagColor] = useState<TagColor>(TagColor.NONE);
   const [guessHistory, setGuessHistory] = useState<GuessResult[]>([]);
+  const [isGuessesOpen, setIsGuessesOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(getDateKey(0));
   
@@ -185,16 +186,43 @@ const App: React.FC = () => {
     if (selectedTiles.length !== 4) return;
 
     const selectedWords = selectedTiles.map(t => t.word);
-    
+
+    const guessKey = [...selectedWords].sort().join('|');
+    const hasGuessedAlready = guessHistory.some(g => {
+      if (!g.words || g.words.length !== 4) return false;
+      return [...g.words].sort().join('|') === guessKey;
+    });
+
+    if (hasGuessedAlready) {
+      setMessage('Already guessed.');
+      setTimeout(() => setMessage(''), 2000);
+      return;
+    }
+
     const guessColors = selectedWords.map(word => {
       const cat = puzzle.categories.find(c => c.words.includes(word));
       return cat?.color || CategoryColor.NONE;
     });
-    setGuessHistory(prev => [...prev, { colors: guessColors }]);
 
-    const matchedCategory = puzzle.categories.find(cat => 
+    const matchedCategory = puzzle.categories.find(cat =>
       cat.words.every(w => selectedWords.includes(w))
     );
+
+    let maxMatch = 0;
+    if (!matchedCategory) {
+      puzzle.categories.forEach(cat => {
+        const matches = cat.words.filter(w => selectedWords.includes(w)).length;
+        if (matches > maxMatch) maxMatch = matches;
+      });
+    }
+
+    const guessResult: GuessResult['result'] = matchedCategory
+      ? 'SOLVED'
+      : maxMatch === 3
+        ? 'ALMOST'
+        : 'WRONG';
+
+    setGuessHistory(prev => [...prev, { colors: guessColors, words: selectedWords, result: guessResult }]);
 
     if (matchedCategory) {
       const newSolved = [...solvedCategories, matchedCategory].sort((a, b) => a.difficulty - b.difficulty);
@@ -215,12 +243,6 @@ const App: React.FC = () => {
     } else {
       const newMistakes = mistakes - 1;
       setMistakes(newMistakes);
-
-      let maxMatch = 0;
-      puzzle.categories.forEach(cat => {
-        const matches = cat.words.filter(w => selectedWords.includes(w)).length;
-        if (matches > maxMatch) maxMatch = matches;
-      });
 
       if (maxMatch === 3) {
         setMessage('One away...');
@@ -250,12 +272,14 @@ const App: React.FC = () => {
 
   const handleShare = () => {
     if (!puzzle) return;
-    const grid = guessHistory.map(guess => 
+    if (status !== 'WON' && status !== 'LOST') return;
+
+    const grid = guessHistory.map(guess =>
       guess.colors.map(c => COLOR_EMOJI[c]).join('')
     ).join('\n');
-    
+
     const text = `Konnections\nPuzzle: ${puzzle.date || 'Today'}\n${grid}`;
-    
+
     navigator.clipboard.writeText(text).then(() => {
       setMessage('Results copied to clipboard!');
       setTimeout(() => setMessage(''), 2000);
@@ -277,6 +301,14 @@ const App: React.FC = () => {
     setDefinition(null);
     setIsLookingUp(false);
   }, []);
+
+  const handleSelectGuess = (words: string[]) => {
+    if (status !== 'PLAYING') return;
+    setTiles(prev => prev.map(t => {
+      if (t.isSolved) return { ...t, isSelected: false };
+      return { ...t, isSelected: words.includes(t.word) };
+    }));
+  };
 
   const selectedCount = tiles.filter(t => t.isSelected).length;
 
@@ -377,28 +409,81 @@ const App: React.FC = () => {
           disabled={status !== 'PLAYING' || isGenerating}
         />
 
+
         <div className="w-full border-t border-gray-100 mt-4 pt-8">
 
           
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="flex justify-center gap-2">
             {(Object.keys(TAG_LABELS) as TagColor[]).filter(c => c !== TagColor.NONE).map(color => (
               <button
                 key={color}
+                aria-label={TAG_LABELS[color]}
+                title={TAG_LABELS[color]}
                 onClick={() => setActiveTagColor(activeTagColor === color ? TagColor.NONE : color)}
                 className={`
-                  w-full h-12 rounded-xl flex items-center justify-center font-black text-[11px] uppercase tracking-wider transition-all
+                  w-8 h-8 rounded-lg transition-all
                   border-2 ${activeTagColor === color ? 'border-black scale-105 shadow-lg' : 'border-transparent opacity-80 hover:opacity-100'}
                 `}
-                style={{ 
-                  backgroundColor: TAG_COLOR_MAP[color],
-                  color: 'white',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.2)'
-                }}
-              >
-                {activeTagColor === color ? 'Active' : TAG_LABELS[color]}
-              </button>
+                style={{ backgroundColor: TAG_COLOR_MAP[color] }}
+              ></button>
             ))}
           </div>
+
+          {guessHistory.length > 0 && (
+            <div className="w-full mt-6">
+              <button
+                type="button"
+                onClick={() => setIsGuessesOpen(v => !v)}
+                className="w-full flex items-center justify-between rounded-lg px-2 py-2 hover:bg-gray-50 transition-colors"
+              >
+                <span className="font-black text-xs uppercase tracking-wider text-gray-600">Guesses</span>
+                <span className="text-[11px] text-gray-400 font-bold">
+                  {guessHistory.length} {isGuessesOpen ? '▾' : '▸'}
+                </span>
+              </button>
+
+              {isGuessesOpen && (
+                <div className="flex flex-col gap-2 mt-2">
+                  {guessHistory.map((guess, idx) => {
+                    // IMPORTANT: Don't show anything derived from category membership (colors), it's too revealing.
+                    const result = guess.result ?? 'WRONG';
+                    const words = guess.words ?? [];
+
+                    const pillClass =
+                      result === 'SOLVED'
+                        ? 'bg-green-100 text-green-800'
+                        : result === 'ALMOST'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-700';
+
+                    const pillText = result === 'SOLVED' ? 'Solved' : result === 'ALMOST' ? 'Almost' : 'Nope';
+
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="w-full flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-gray-50 transition-colors text-left"
+                        onClick={() => words.length === 4 && handleSelectGuess(words)}
+                        disabled={status !== 'PLAYING' || words.length !== 4}
+                        title={words.length === 4 ? 'Select these tiles' : ''}
+                      >
+                        <div className="flex flex-wrap gap-1.5">
+                          {words.map(w => (
+                            <span key={w} className="px-2 py-1 rounded-md bg-gray-100 text-gray-800 text-[11px] font-black uppercase tracking-wider">
+                              {w}
+                            </span>
+                          ))}
+                        </div>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${pillClass}`}>
+                          {pillText}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
 

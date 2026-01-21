@@ -8,11 +8,16 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
+    html, body {
+      height: 100%;
+    }
     body {
       font-family: 'Libre+Franklin', sans-serif;
       background-color: #ffffff;
       color: #000000;
-      touch-action: manipulation;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
     }
   </style>
 <script type="importmap">
