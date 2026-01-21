@@ -48,14 +48,13 @@ const Tile: React.FC<TileProps> = ({ tile, onClick, onLookup, disabled }) => {
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     clearLongPressTimer();
-    
-    // If it was a long press, prevent the click
+
+    // If it was a long press, prevent the click (but don't block scroll)
     if (isLongPress.current) {
-      e.preventDefault();
       isLongPress.current = false;
       return;
     }
-    
+
     touchStartPos.current = null;
   }, [clearLongPressTimer]);
 

@@ -41,4 +41,6 @@ export type GameStatus = 'PLAYING' | 'WON' | 'LOST';
 
 export interface GuessResult {
   colors: CategoryColor[];
+  words?: string[];
+  result?: 'SOLVED' | 'ALMOST' | 'WRONG';
 }
