@@ -211,3 +211,80 @@ app.http("getPuzzle", {
   route: "puzzle",
   handler: getPuzzle
 });
+
+// Reset puzzle cache - requires secret token
+export async function resetPuzzle(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  context.log("resetPuzzle function triggered");
+  
+  const dateParam = request.query.get("date");
+  if (!dateParam) {
+    return {
+      status: 400,
+      jsonBody: { error: "Missing required 'date' parameter" }
+    };
+  }
+  
+  // Read token from request body
+  let token: string | undefined;
+  try {
+    const body = await request.json() as { token?: string };
+    token = body.token;
+  } catch {
+    return {
+      status: 400,
+      jsonBody: { error: "Invalid request body" }
+    };
+  }
+  
+  if (!token) {
+    return {
+      status: 400,
+      jsonBody: { error: "Missing required 'token' in body" }
+    };
+  }
+  
+  // Validate token against environment variable
+  const resetSecret = process.env.RESET_SECRET;
+  if (!resetSecret || token !== resetSecret) {
+    context.warn("Invalid reset token attempt");
+    return {
+      status: 401,
+      jsonBody: { error: "Invalid token" }
+    };
+  }
+  
+  try {
+    const containerClient = await getBlobClient();
+    const blobClient = containerClient.getBlobClient(`${dateParam}.json`);
+    
+    const exists = await blobClient.exists();
+    if (!exists) {
+      context.log(`No cached puzzle found for ${dateParam}`);
+      return {
+        status: 200,
+        jsonBody: { message: "No cached puzzle to delete", deleted: false }
+      };
+    }
+    
+    await blobClient.delete();
+    context.log(`Deleted cached puzzle for ${dateParam}`);
+    
+    return {
+      status: 200,
+      jsonBody: { message: "Cache cleared successfully", deleted: true }
+    };
+  } catch (error) {
+    context.error("resetPuzzle error:", error);
+    return {
+      status: 500,
+      jsonBody: { error: "Failed to reset cache" }
+    };
+  }
+}
+
+app.http("resetPuzzle", {
+  methods: ["POST"],
+  authLevel: "anonymous",
+  route: "puzzle/reset",
+  handler: resetPuzzle
+});

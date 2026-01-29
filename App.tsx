@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   GameBoard, 
   TileState, 
@@ -9,7 +9,7 @@ import {
   Category,
   GuessResult
 } from './types';
-import { generatePuzzle, getDateKey } from './services/geminiService';
+import { generatePuzzle, getDateKey, resetPuzzleCache } from './services/geminiService';
 import { lookupWord as fetchDefinition, DefinitionResult } from './services/dictionaryService';
 import { COLOR_MAP, TAG_COLOR_MAP, TAG_LABELS, INITIAL_MISTAKES, COLOR_EMOJI } from './constants';
 import Tile from './components/Tile';
@@ -75,6 +75,97 @@ const App: React.FC = () => {
   const [definition, setDefinition] = useState<DefinitionResult | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+
+  // Secret reset prompt state
+  const [showResetPrompt, setShowResetPrompt] = useState(false);
+  const [resetSecret, setResetSecret] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const keyBufferRef = useRef<string>('');
+  const titleTapCountRef = useRef<number>(0);
+  const titleTapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Title tap handler for mobile (5 taps triggers reset prompt)
+  const handleTitleTap = () => {
+    if (showResetPrompt) return;
+    
+    titleTapCountRef.current += 1;
+    
+    // Clear existing timeout
+    if (titleTapTimeoutRef.current) {
+      clearTimeout(titleTapTimeoutRef.current);
+    }
+    
+    if (titleTapCountRef.current >= 5) {
+      console.log('Reset trigger detected (title tap)');
+      titleTapCountRef.current = 0;
+      setShowResetPrompt(true);
+    } else {
+      // Reset counter after 2 seconds of no taps
+      titleTapTimeoutRef.current = setTimeout(() => {
+        titleTapCountRef.current = 0;
+      }, 2000);
+    }
+  };
+
+  // Keyboard listener for secret "reset" trigger
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      // Only track lowercase letters
+      if (e.key.length === 1 && e.key.match(/[a-z]/i)) {
+        keyBufferRef.current = (keyBufferRef.current + e.key.toLowerCase()).slice(-5);
+        
+        if (keyBufferRef.current === 'reset' && !showResetPrompt) {
+          console.log('Reset trigger detected');
+          keyBufferRef.current = '';
+          setShowResetPrompt(true);
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showResetPrompt]);
+
+  // Handle escape key to close reset prompt
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showResetPrompt) {
+        setShowResetPrompt(false);
+        setResetSecret('');
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showResetPrompt]);
+
+  const handleResetCache = async () => {
+    if (!resetSecret.trim()) return;
+    
+    setIsResetting(true);
+    try {
+      await resetPuzzleCache(selectedDate, resetSecret.trim());
+      setMessage('Cache cleared! Fetching fresh puzzle...');
+      setShowResetPrompt(false);
+      setResetSecret('');
+      clearGameState(selectedDate);
+      await initGame(selectedDate, true);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Invalid token') {
+        setMessage('Invalid secret');
+      } else {
+        setMessage('Failed to reset cache');
+      }
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const initGame = useCallback(async (dateKey?: string, forceNew: boolean = false) => {
     const targetDate = dateKey || selectedDate;
@@ -315,7 +406,10 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen max-w-2xl mx-auto px-4 py-8 flex flex-col items-center">
       <header className="mb-6 text-center">
-        <h1 className="text-4xl sm:text-5xl font-black mb-1 italic">KONNECTIONS</h1>
+        <h1 
+          className="text-4xl sm:text-5xl font-black mb-1 italic cursor-default select-none"
+          onClick={handleTitleTap}
+        >KONNECTIONS</h1>
         <p className="text-xs sm:text-sm text-gray-500 font-medium mb-3">{puzzle?.date || 'Today'}</p>
         <div className="flex justify-center gap-2">
           <button
@@ -533,6 +627,49 @@ const App: React.FC = () => {
           }}
           onClose={() => setShowArchive(false)}
         />
+      )}
+
+      {/* Secret Reset Prompt */}
+      {showResetPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl p-6 shadow-2xl max-w-sm w-full mx-4">
+            <h3 className="font-bold text-lg mb-4">Admin: Reset Cache</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This will delete the cached puzzle for {selectedDate} and fetch a fresh one.
+            </p>
+            <input
+              type="password"
+              placeholder="Enter secret"
+              value={resetSecret}
+              onChange={(e) => setResetSecret(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleResetCache();
+              }}
+              autoFocus
+              disabled={isResetting}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowResetPrompt(false);
+                  setResetSecret('');
+                }}
+                disabled={isResetting}
+                className="flex-1 py-2 px-4 rounded-lg border border-gray-300 font-medium hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetCache}
+                disabled={isResetting || !resetSecret.trim()}
+                className="flex-1 py-2 px-4 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50"
+              >
+                {isResetting ? 'Resetting...' : 'Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

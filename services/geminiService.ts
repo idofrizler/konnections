@@ -79,3 +79,35 @@ function getFallbackPuzzle(): GameBoard {
     allWords: categories.flatMap(c => c.words).sort(() => Math.random() - 0.5)
   };
 }
+
+/**
+ * Resets the cached puzzle for a given date. Requires admin token.
+ * @param dateKey - Date in YYYY-MM-DD format
+ * @param token - Secret admin token for authorization
+ * @returns true if cache was deleted, false if no cache existed
+ * @throws Error if request fails or token is invalid
+ */
+export async function resetPuzzleCache(dateKey: string, token: string): Promise<boolean> {
+  console.log(`Attempting to reset cache for date: ${dateKey}`);
+  
+  const response = await fetch(`/api/puzzle/reset?date=${dateKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token }),
+  });
+  
+  if (response.status === 401) {
+    throw new Error('Invalid token');
+  }
+  
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to reset cache');
+  }
+  
+  const data = await response.json();
+  console.log(`Cache reset result:`, data);
+  return data.deleted;
+}
