@@ -191,6 +191,7 @@ export async function getPuzzle(request: HttpRequest, context: InvocationContext
     } catch (apiError) {
       context.error("API generation failed:", apiError);
       const fallback = getFallbackPuzzle();
+      // DO NOT cache fallback puzzles - they should only be used for transient errors
       return {
         status: 200,
         jsonBody: { puzzle: fallback, cached: false, fallback: true }
